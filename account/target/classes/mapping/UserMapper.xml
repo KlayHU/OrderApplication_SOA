@@ -7,7 +7,8 @@
         select * from t_user where username=#{param1} and password=#{param2}
     </select>
 
-    <select id="signUp" resultType="com.klay.entity.User">
-        count (1) from t_user where username = #{param1}
-    </select>
+    <insert id="register" parameterType="com.klay.entity.User">
+        insert into t_admin(username,password,telephone) values (#{username},#{password},#{getPhone})
+    </insert>
+
 </mapper>

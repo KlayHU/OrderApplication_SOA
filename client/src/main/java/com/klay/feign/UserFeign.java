@@ -21,7 +21,7 @@ public interface UserFeign {
     @GetMapping("/user/findById/{id}")
     public User findById(@PathVariable("id") long id);
 
-    @GetMapping("/user/conut")
+    @GetMapping("/user/count")
     public int count();
 
     @PostMapping("/user/save")

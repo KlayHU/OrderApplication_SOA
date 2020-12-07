@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" style="height: 100%">
+<head>
+    <meta charset="utf-8"/>
+    <title>验证码登录</title>
+    <script type="text/javascript" th:src="@{/layui/layui.js}"></script>
+    <script type="text/javascript" th:src="@{/js/jquery-3.3.1.min.js}"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+    <link rel="stylesheet" th:href="@{/layui/css/layui.css}" media="all">
+</head>
+<body>
+<div class="main-con clearfix">
+    <div class="clearfix" style="margin-top: 7%;margin-bottom:2%;">
+        <form id="verifyForm" class="layui-form" action="#" method="post">
+            <div class="layui-form-item">
+                <label class="layui-form-label">用户名：</label>
+                <div class="layui-input-block  register-input-icon">
+                    <i class="layui-icon layui-icon-cellphone"></i>
+                    <input class="layui-input" id="username" type="text" name="username" lay-verify="" placeholder="请输入用户名" autocomplete="off"/>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">密码：</label>
+                <div class="layui-input-block  register-input-icon">
+                    <i class="layui-icon layui-icon-cellphone"></i>
+                    <input class="layui-input" id="password" type="password" name="password" lay-verify="" placeholder="请输入密码" autocomplete="off"/>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">手机号：</label>
+                <div class="layui-input-block  register-input-icon">
+                    <i class="layui-icon layui-icon-cellphone"></i>
+                    <input class="layui-input" id="phone" type="text" name="phone" lay-verify="" placeholder="请输入手机号" autocomplete="off"/>
+                </div>
+            </div>
+            <div class="lg-submit" id="right">
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input id="sendCode" type="button" class="layui-btn layui-btn-primary" value="点击获验证码" onclick="getCode()">
+                    </div>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">验证码：</label>
+                <div class="layui-input-block  register-input-icon">
+                    <i class="iconfont icon-email"></i>
+                    <input class="layui-input" id="code" type="text" name="code" lay-verify="" placeholder="输入验证码" autocomplete="off"/>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" id="verifySubmit" class="layui-btn layui-btn-normal" onclick="smsSubmit()">提交</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+<script th:src="@{/layui/layui.js}" charset="utf-8"></script>
+<script>
+
+//     layui.use(['form'], function(){
+//     //验证手机号
+//     form.verify({
+//         phone: function(value){
+//             if(value.length == 0){
+//                 return '手机号不能为空';
+//             }
+//         }
+//         ,phone: [/^1[0-9]{10}$/, '请输入正确的手机号']
+//     });
+// });
+    var isClick = false;
+    function getCode() {
+        var getPhone = document.getElementById("phone").value;
+        var res = /^1[0-9]{10}$/;
+        if (getPhone.length == 0) {
+            alert("手机号不能为空");
+            return false;
+        } else if (!res.test(getPhone)) {
+            alert("请输入正确的手机号");
+            return false;
+        }
+        isClick = true;
+            $.ajax({
+                type: "POST",
+                url: "/account/sendCode",
+                data: {'phone': getPhone},
+                contentType: "application/x-www-form-urlencoded",
+                success: function (data) {
+                    if (data.code === 200) {
+                        alert(data.msg);
+                    } else {
+                        alert(data.msg)
+                    }
+                },
+                error: function (data) {
+                    alert("操作请求错误，请您稍后再试");
+                }
+            });
+        time(document.getElementById("sendCode"));
+        var wait = 60;
+        function time(object) {
+            if (wait == 0) {
+                object.removeAttribute("disabled");
+                wait = 60;
+            } else {
+                object.setAttribute("disabled", true);
+                wait--;
+                object.value = wait + "秒后重新发送";
+                setTimeout(function () {
+                    time(object)
+                }, 1000);
+            }
+        }
+    }
+
+    function smsSubmit() {
+        var getPhone = document.getElementById("phone").value;
+        if (!isClick) {
+            alert("请先获取验证码!");
+            return false;
+        }
+        var code = document.getElementById("code").value;
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+        $.ajax({
+            type: "POST",
+            data: {'verifyCode': code,'username':username,'password':password,'phone':getPhone},
+            url: "/account/verifyCode",
+            contentType: "application/x-www-form-urlencoded",
+            success: function (data) {
+                if (data.code == 200) {
+                    alert(data.msg);
+                    parent.location.href = "/account/redirect/login";
+                } else {
+                    alert(data.msg);
+                }
+            },
+            error: function () {
+                alert("未进行return：false处理弹出框");
+            }
+        });
+    }
+
+</script>
+</html>
