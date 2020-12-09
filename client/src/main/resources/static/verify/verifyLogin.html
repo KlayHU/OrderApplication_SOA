@@ -30,7 +30,7 @@
                 <label class="layui-form-label">手机号：</label>
                 <div class="layui-input-block  register-input-icon">
                     <i class="layui-icon layui-icon-cellphone"></i>
-                    <input class="layui-input" id="phone" type="text" name="phone" lay-verify="" placeholder="请输入手机号" autocomplete="off"/>
+                    <input class="layui-input" id="telephone" type="text" name="telephone" lay-verify="" placeholder="请输入手机号" autocomplete="off"/>
                 </div>
             </div>
             <div class="lg-submit" id="right">
@@ -72,12 +72,12 @@
 // });
     var isClick = false;
     function getCode() {
-        var getPhone = document.getElementById("phone").value;
+        var telephone = document.getElementById("telephone").value;
         var res = /^1[0-9]{10}$/;
-        if (getPhone.length == 0) {
+        if (telephone.length == 0) {
             alert("手机号不能为空");
             return false;
-        } else if (!res.test(getPhone)) {
+        } else if (!res.test(telephone)) {
             alert("请输入正确的手机号");
             return false;
         }
@@ -85,7 +85,7 @@
             $.ajax({
                 type: "POST",
                 url: "/account/sendCode",
-                data: {'phone': getPhone},
+                data: {'telephone': telephone},
                 contentType: "application/x-www-form-urlencoded",
                 success: function (data) {
                     if (data.code === 200) {
@@ -94,7 +94,7 @@
                         alert(data.msg)
                     }
                 },
-                error: function (data) {
+                error: function () {
                     alert("操作请求错误，请您稍后再试");
                 }
             });
@@ -116,7 +116,7 @@
     }
 
     function smsSubmit() {
-        var getPhone = document.getElementById("phone").value;
+        var telephone = document.getElementById("telephone").value;
         if (!isClick) {
             alert("请先获取验证码!");
             return false;
@@ -126,11 +126,11 @@
         var password = document.getElementById("password").value;
         $.ajax({
             type: "POST",
-            data: {'verifyCode': code,'username':username,'password':password,'phone':getPhone},
+            data: {'code': code,'username':username,'password':password,'telephone':telephone},
             url: "/account/verifyCode",
             contentType: "application/x-www-form-urlencoded",
             success: function (data) {
-                if (data.code == 200) {
+                if (data.code === 200) {
                     alert(data.msg);
                     parent.location.href = "/account/redirect/login";
                 } else {

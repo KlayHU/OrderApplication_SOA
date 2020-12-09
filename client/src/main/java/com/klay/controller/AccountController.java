@@ -4,8 +4,6 @@ import com.klay.api.ApiResult;
 import com.klay.entity.Admin;
 import com.klay.entity.User;
 import com.klay.feign.AccountFeign;
-import com.klay.service.SmsService;
-import com.netflix.discovery.converters.Auto;
 import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -14,9 +12,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @description:
@@ -30,12 +26,6 @@ public class AccountController {
 
     @Autowired
     private AccountFeign accountFeign;
-
-    @Autowired
-    private SmsService smsService;
-
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
 
     @PostMapping("/login")
     public String login(@RequestParam("username") String username, @RequestParam("password") String password,
@@ -81,70 +71,19 @@ public class AccountController {
         return "/verify/verifyLogin";
     }
 
-    /**
-     * 验证码发送
-     *
-     * @param phone
-     * @param session
-     * @return
-     */
+
     @RequestMapping(value = "/sendCode", method = RequestMethod.POST)
     @ResponseBody
-    public ApiResult sendCode(@RequestParam(value = "phone", required = false) String phone, HttpSession session) {
-        ApiResult result = new ApiResult();
-        String getPhone = accountFeign.sendSms(phone);
-        if (getPhone == null) {
-            return null;
-        }
-        String code = redisTemplate.opsForValue().get(phone);
-        if (!StringUtils.isEmpty(code)) {
-            //todo 验证码未过期，页面处理
-            log.info("===========================验证码还未过期，请等待60s后重新发送===========================");
-        }
-        code = String.valueOf(Math.random() * 10000).substring(0, 4);
-        HashMap<String, Object> param = new HashMap<>();
-        param.put("code", code);
-        boolean isSend = smsService.send(phone, "SMS_205471000", param);
-        if (isSend) {
-            redisTemplate.opsForValue().set(phone, code, 1, TimeUnit.MINUTES);
-            result.setCode(ApiResult.SEND_SUCCESS.getCode());
-            result.setMsg(ApiResult.SEND_SUCCESS.getMsg());
-            log.info("==============手机号：" + phone + " 验证码：" + code + " 发送成功！===============");
-            session.setAttribute("code", code);
-            return result;
-        }
-        log.info("==========================验证码发送失败=========================");
-        result.setCode(ApiResult.SEND_FAIL.getCode());
-        result.setMsg(ApiResult.SEND_FAIL.getMsg());
-        return result;
+    public ApiResult sendCode(@RequestParam(value = "telephone") String telephone) {
+        return accountFeign.sendCode(telephone);
     }
 
-    /**
-     * 验证码校验
-     * @param code
-     * @param session
-     * @return
-     */
-    @RequestMapping(value = "/verifyCode",method = RequestMethod.POST)
+
+    @RequestMapping(value = "/verifyCode", method = RequestMethod.POST)
     @ResponseBody
-    public ApiResult verifyCode(@RequestParam(value = "verifyCode" , required = false) String code, HttpSession session,
-                                User user) {
-        ApiResult result = new ApiResult();
-        if (session.getAttribute("code").toString() == null) {
-            result.setCode(ApiResult.VERIFY_FAIL.getCode());
-            result.setMsg(ApiResult.VERIFY_FAIL.getMsg());
-            return result;
-        }
-        String getCode = session.getAttribute("code").toString();
-        if (getCode.equals(code)) {
-            accountFeign.verifySms(user, code, session);
-            result.setCode(ApiResult.VERIFY_SUCCESS.getCode());
-            result.setMsg(ApiResult.VERIFY_SUCCESS.getMsg());
-            return result;
-        }
-        else {
-            return result;
-        }
+    public ApiResult verifyCode(@RequestParam(value = "code") String code, @RequestParam("username") String username,
+                                @RequestParam("password") String password, @RequestParam("telephone") String telephone) {
+        return accountFeign.verifyCode(code, username, password, telephone);
     }
 
     @GetMapping("/logout")

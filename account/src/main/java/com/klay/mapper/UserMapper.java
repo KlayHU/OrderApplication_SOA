@@ -11,5 +11,5 @@ public interface UserMapper {
 
     public User login(String username , String password);
 
-    public User register(User user);
+    public void register(User user);
 }

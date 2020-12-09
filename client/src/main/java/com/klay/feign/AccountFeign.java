@@ -1,7 +1,8 @@
 package com.klay.feign;
 
-import com.klay.entity.User;
+import com.klay.api.ApiResult;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -12,6 +13,7 @@ import javax.servlet.http.HttpSession;
  * @create: 2019/12/18 17:41
  **/
 @FeignClient(value = "ACCOUNT")
+@Component
 public interface AccountFeign {
 
     //登录
@@ -21,9 +23,10 @@ public interface AccountFeign {
 
     //发送验证码
     @RequestMapping(value = "/account/sendCode",method = RequestMethod.POST)
-    public String sendSms(@RequestParam("phone") String phone);
+    public ApiResult sendCode(@RequestParam(value = "telephone") String phone);
 
     //验证码校验
-    @RequestMapping(value = "/account/verifyCode",method = RequestMethod.POST)
-    public String verifySms(@RequestBody User user,@RequestParam("code") String code,@RequestParam("session") HttpSession session);
+    @RequestMapping(value = "/account/verifyCode", method = RequestMethod.POST)
+    public ApiResult verifyCode(@RequestParam(value = "code") String code, @RequestParam("username") String username,
+                                @RequestParam("password")String password, @RequestParam("telephone")String telephone);
 }

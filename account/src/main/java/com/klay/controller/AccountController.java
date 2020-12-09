@@ -1,13 +1,19 @@
 package com.klay.controller;
 
-import com.klay.entity.Admin;
+import com.klay.Api.ApiResult;
 import com.klay.entity.User;
 import com.klay.mapper.AdminMapper;
 import com.klay.mapper.UserMapper;
+import com.klay.service.SmsService;
+import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @description:
@@ -17,12 +23,17 @@ import javax.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/account")
+@Log
 public class AccountController {
 
     @Autowired
     private AdminMapper adminMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private SmsService smsService;
 
     @GetMapping("/login/{username}/{password}/{type}")
     public Object login(@PathVariable("username") String username ,@PathVariable("password") String password,
@@ -40,23 +51,64 @@ public class AccountController {
     /**
      * 验证码发送
      */
-    @RequestMapping(value = "/sendCode",method = RequestMethod.POST)
-    public String sendSms(String phone){
-        if (phone != null || phone.length()!=0) {
-            return phone;
+    @RequestMapping(value = "/sendCode", method = RequestMethod.POST)
+    @ResponseBody
+    public ApiResult sendCode(@RequestParam(value = "telephone") String telephone) {
+        ApiResult result = new ApiResult();
+        String code = redisTemplate.opsForValue().get(telephone);
+        if (!StringUtils.isEmpty(code)) {
+            //todo 验证码未过期，页面处理
+            log.info("===========================验证码还未过期，请等待60s后重新发送===========================");
+            result.setCode(ApiResult.SEND_RETRY.getCode());
+            result.setMsg(ApiResult.SEND_RETRY.getMsg());
+            return result;
         }
-        return null;
+        code = String.valueOf(Math.random() * 10000).substring(0, 4);
+        HashMap<String, Object> param = new HashMap<>();
+        param.put("code", code);
+        boolean isSend = smsService.send(telephone, "SMS_205471000", param);
+        if (isSend) {
+            redisTemplate.opsForValue().set(telephone, code, 1, TimeUnit.MINUTES);
+            result.setCode(ApiResult.SEND_SUCCESS.getCode());
+            result.setMsg(ApiResult.SEND_SUCCESS.getMsg());
+            log.info("==============手机号：" + telephone + " 验证码：" + code + " 发送成功！===============");
+            //session.setAttribute("code", code);
+            return result;
+        }
+        log.info("==========================验证码发送失败=========================");
+        result.setCode(ApiResult.SEND_FAIL.getCode());
+        result.setMsg(ApiResult.SEND_FAIL.getMsg());
+        return result;
     }
 
     /**
      * 验证码校验
+     *
+     * @param code
+     * @return
      */
     @RequestMapping(value = "/verifyCode", method = RequestMethod.POST)
-    public User verifySms(@RequestBody User user, String code,
-                            HttpSession session) {
-        if (code.equals(session.getAttribute("code"))) {
-            userMapper.register(user);
+    @ResponseBody
+    public ApiResult verifyCode(@RequestParam(value = "code") String code, @RequestParam("username") String username,
+                                @RequestParam("password")String password,@RequestParam("telephone")String telephone) {
+        ApiResult result = new ApiResult();
+        if (StringUtils.isEmpty(redisTemplate.opsForValue().get(telephone))) {
+            return null;
         }
-        return null;
+        User user = new User();
+        String getCode = redisTemplate.opsForValue().get(telephone);
+        if (getCode.equals(code)) {
+            user.setUsername(username);
+            user.setPassword(password);
+            user.setTelephone(telephone);
+            userMapper.register(user);
+            result.setCode(ApiResult.VERIFY_SUCCESS.getCode());
+            result.setMsg(ApiResult.VERIFY_SUCCESS.getMsg());
+            return result;
+        } else {
+            result.setCode(ApiResult.VERIFY_FAIL.getCode());
+            result.setMsg(ApiResult.VERIFY_FAIL.getMsg());
+            return result;
+        }
     }
 }
